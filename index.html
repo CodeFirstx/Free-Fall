@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Draw and Fall</title>
+<style>
+    canvas {
+        border: 2px solid #000;
+    }
+</style>
+</head>
+<body>
+<h1 style="margin-left: 550px;">Draw and Fall</h1>
+<canvas id="myCanvas" width="900" height="500" style="margin-top: 30px; margin-left: 200px;"></canvas>
+
+<script>
+    var canvas = document.getElementById('myCanvas');
+    var ctx = canvas.getContext('2d');
+    var isDrawing = false;
+    var isFinishedDrawing = false; // Flag to indicate if drawing is finished
+    var lines = [];
+    var gravity = 0.5; // adjust this value as needed
+    var lineWidth = 5; // adjust this value for thicker lines
+
+    canvas.addEventListener('mousedown', startDrawing);
+    canvas.addEventListener('mousemove', drawLine);
+    canvas.addEventListener('mouseup', endDrawing);
+    canvas.addEventListener('mouseleave', endDrawing);
+
+    function startDrawing(e) {
+        isDrawing = true;
+        lines.push({
+            color: getRandomColor(),
+            points: [{
+                x: e.clientX - canvas.getBoundingClientRect().left,
+                y: e.clientY - canvas.getBoundingClientRect().top
+            }]
+        });
+    }
+
+    function drawLine(e) {
+        if (!isDrawing) return;
+        var currentX = e.clientX - canvas.getBoundingClientRect().left;
+        var currentY = e.clientY - canvas.getBoundingClientRect().top;
+        lines[lines.length - 1].points.push({ x: currentX, y: currentY });
+        redraw();
+    }
+
+    function redraw() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        lines.forEach(function (line) {
+            ctx.beginPath();
+            ctx.moveTo(line.points[0].x, line.points[0].y);
+            ctx.strokeStyle = line.color;
+            ctx.lineWidth = lineWidth;
+            for (var i = 1; i < line.points.length; i++) {
+                ctx.lineTo(line.points[i].x, line.points[i].y);
+            }
+            ctx.stroke();
+        });
+    }
+
+    function endDrawing() {
+        isDrawing = false;
+        isFinishedDrawing = true; // Set drawing as finished
+        fallIfDrawingComplete(); // Check if drawing is complete before initiating fall
+    }
+
+    function fallIfDrawingComplete() {
+        if (isFinishedDrawing) { // Only initiate fall if drawing is finished
+            fall();
+        }
+    }
+
+    function fall() {
+        var interval = setInterval(function() {
+            lines.forEach(function (line, index) {
+                // Check if the bottom of the current line has reached the bottom of the canvas
+                if (line.points[line.points.length - 1].y >= canvas.height) {
+                    return;
+                }
+                // Move the line downward
+                line.points.forEach(function (point) {
+                    point.y += gravity;
+                });
+                // Check for collision with other lines
+                for (var i = index + 1; i < lines.length; i++) {
+                    if (linesCollide(line.points, lines[i].points)) {
+                        // Merge the current line with the line it collided with
+                        lines[i].points = lines[i].points.concat(line.points);
+                        lines.splice(index, 1);
+                        clearInterval(interval);
+                        redraw();
+                        fall();
+                        return;
+                    }
+                }
+            });
+            redraw();
+        }, 20);
+    }
+
+    // Function to check if two lines collide
+    function linesCollide(line1, line2) {
+        for (var i = 0; i < line1.length; i++) {
+            for (var j = 0; j < line2.length; j++) {
+                if (Math.abs(line1[i].x - line2[j].x) < 2 && Math.abs(line1[i].y - line2[j].y) < 2) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    // Function to generate a random color
+    function getRandomColor() {
+        var letters = '0123456789ABCDEF';
+        var color = '#';
+        for (var i = 0; i < 6; i++) {
+            color += letters[Math.floor(Math.random() * 16)];
+        }
+        return color;
+    }
+</script>
+
+</body>
+</html>
